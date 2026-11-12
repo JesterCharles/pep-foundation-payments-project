@@ -91,7 +91,12 @@ it is absent here and, if offered later, optional.
 
 ## Team
 
-TODO(M1): replace this line with your name or initials and the user story you own.
+## Accounts-payable contact
+
+Fictional contact for this training project: the Northwind Components accounts-payable desk,
+represented by the persona "Rae Lindqvist" (AP desk lead, invented). Questions about a supplier
+invoice or a settlement export go to the AP desk. No real names, email addresses or phone numbers
+belong in this repository.
 
 ## Configuration
 
