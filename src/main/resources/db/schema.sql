@@ -1,0 +1,32 @@
+-- Payment Approval and Reconciliation Platform: PostgreSQL schema.
+-- LEARNER-OWNED (milestone M5). Synthetic data only. No container engine is used:
+-- run this against your local PostgreSQL with psql, using PG* variables (never a password in this file).
+--
+-- The released tests (src/test/java/payments/release/m5) apply this whole file to a fresh,
+-- uniquely named database, then insert rows directly to check that the DATABASE refuses
+-- every invalid value. Use exactly these table and column names:
+--
+-- payment_requests
+--   id             identity primary key (your nextId() and save() decide how ids are assigned)
+--   supplier_id    text, must match SUP- followed by four digits (upper case)
+--   invoice_number text, never blank
+--   amount_cents   BIGINT, 1 .. 999999999
+--   currency       exactly 'USD'
+--   requested_by   text, not null
+--   status         one of 'SUBMITTED', 'APPROVED', 'REJECTED', 'CANCELLED', 'PAID'
+--   UNIQUE (supplier_id, invoice_number)      -- the duplicate-invoice invariant
+--
+-- payment_events
+--   id             identity primary key
+--   request_id     references payment_requests(id)
+--   seq            integer
+--   actor_id, action, detail   text, not null
+--   UNIQUE (request_id, seq)
+--
+-- settlements
+--   reference      text primary key
+--   request_id     references payment_requests(id), UNIQUE (one settlement per request)
+--   amount_cents   BIGINT
+--   currency       exactly 'USD'
+
+-- TODO(M5): write the three CREATE TABLE statements with their constraints here.

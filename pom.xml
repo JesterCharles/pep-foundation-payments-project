@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Foundation Project 1: Payment Approval and Reconciliation Platform (training project).
+  Supplied in release 2 with every dependency the project needs (Javalin for M4, the PostgreSQL
+  driver for M5); learner-owned afterwards. release/m4 and release/m5 pom-additions.md only
+  describe what those dependencies are for.
+
+  One test command per milestone (see README.md):
+    M2  mvn -q test -Pm2
+    M3  mvn -q test -Pm3
+    M4  mvn -q test -Pm4
+    M5  mvn -q test -Pm5      (needs a local PostgreSQL reachable through PG* variables)
+    M6  mvn -q test           (the complete suite)
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>pep.foundation</groupId>
+  <artifactId>payments-project</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- JVM flags for the test JVM: quiet on JDK 25 when Mockito attaches its agent. -->
+    <surefire.jvm.args>-XX:+EnableDynamicAgentLoading -Xshare:off</surefire.jvm.args>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>6.1.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>6.1.3</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- M4: Javalin 7 bundle (HTTP server, JSON mapper, SLF4J logging) and Mockito; see release/m4/pom-additions.md. -->
+    <dependency>
+      <groupId>io.javalin</groupId>
+      <artifactId>javalin-bundle</artifactId>
+      <version>7.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.24.0</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- M5: PostgreSQL JDBC driver; see release/m5/pom-additions.md. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.14</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.15.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.6</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.5.1</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Quiet on success: test output goes to target/surefire-reports, failures are still printed. -->
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <trimStackTrace>true</trimStackTrace>
+          <argLine>${surefire.jvm.args}</argLine>
+          <workingDirectory>${project.basedir}</workingDirectory>
+        </configuration>
+        <dependencies>
+          <!-- Naming the JUnit provider lets mvn dependency:go-offline fetch it, so mvn -q -o test works offline. -->
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit-platform</artifactId>
+            <version>3.5.6</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      Milestone profiles. The repository holds the stubs for every milestone at once, so each
+      profile runs only the released tests that are due by that milestone (they accumulate).
+      M2 and M3 do not need Javalin yet, so the HTTP layer is left out of their compile.
+    -->
+    <profile>
+      <id>m2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>payments/api/**</exclude>
+                <exclude>payments/App.java</exclude>
+              </excludes>
+              <testExcludes>
+                <testExclude>payments/release/m4/ApiReleaseTest.java</testExclude>
+                <testExclude>payments/release/m5/ApiOnJdbcReleaseTest.java</testExclude>
+                <testExclude>payments/release/m6/ReportsRouteReleaseTest.java</testExclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>payments/release/m2/**/*Test.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>m3</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>payments/api/**</exclude>
+                <exclude>payments/App.java</exclude>
+              </excludes>
+              <testExcludes>
+                <testExclude>payments/release/m4/ApiReleaseTest.java</testExclude>
+                <testExclude>payments/release/m5/ApiOnJdbcReleaseTest.java</testExclude>
+                <testExclude>payments/release/m6/ReportsRouteReleaseTest.java</testExclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>payments/release/m2/**/*Test.java</include>
+                <include>payments/release/m3/**/*Test.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>m4</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>payments/release/m2/**/*Test.java</include>
+                <include>payments/release/m3/**/*Test.java</include>
+                <include>payments/release/m4/**/*Test.java</include>
+                <include>payments/learner/PaymentDeskTest.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>m5</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>payments/release/m2/**/*Test.java</include>
+                <include>payments/release/m3/**/*Test.java</include>
+                <include>payments/release/m4/**/*Test.java</include>
+                <include>payments/release/m5/**/*Test.java</include>
+                <include>payments/learner/**/*Test.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

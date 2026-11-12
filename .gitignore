@@ -1,0 +1,3 @@
+# Payment project: files Git must never track.
+# TODO(M1): add one rule per line for .env, target/, .idea/, .vscode/ and .DS_Store,
+#           then delete this TODO comment. Run `sh tests/m1/run-m1.sh` to check.

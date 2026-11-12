@@ -1,0 +1,6 @@
+# Supplied (release 1). Keep shell scripts and fixtures with LF line endings on every platform.
+*.sh text eol=lf
+*.txt text eol=lf
+*.csv text eol=lf
+*.sha256 text eol=lf
+*.patch text eol=lf

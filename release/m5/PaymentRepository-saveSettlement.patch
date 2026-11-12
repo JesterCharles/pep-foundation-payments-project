@@ -1,0 +1,22 @@
+diff --git a/src/main/java/payments/desk/PaymentRepository.java b/src/main/java/payments/desk/PaymentRepository.java
+--- a/src/main/java/payments/desk/PaymentRepository.java
++++ b/src/main/java/payments/desk/PaymentRepository.java
+@@ -3,6 +3,7 @@ package payments.desk;
+ import java.util.List;
+ 
+ import payments.domain.PaymentRequest;
++import payments.domain.Settlement;
+ 
+ /**
+  * Storage seam for payment requests (supplied in release 4).
+@@ -27,4 +28,10 @@ public interface PaymentRepository {
+ 
+     /** A new id, greater than every id handed out before (1, 2, 3, ...). */
+     int nextId();
++
++    /**
++     * Added in release 5: stores the PAID status of the request, the settlement row and the
++     * "paid" event together, or none of them.
++     */
++    void saveSettlement(PaymentRequest request, Settlement settlement);
+ }
