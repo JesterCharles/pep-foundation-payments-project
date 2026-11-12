@@ -203,10 +203,10 @@ TODO(M6): write how to start the service with environment variables only (for ex
 This section is optional. Use it only if you choose to work on your own computer instead of the
 project you were given.
 
-- Install JDK 25 and Maven as in the Java pages, and for M5 a local PostgreSQL as in the JDBC lab.
-  No container engine is used.
-- Clone the project with `git clone https://github.com/JesterCharles/pep-foundation-payments-project.git`,
-  open the folder in VS Code, then follow "Start here". Get the teammate branch as described in M1.
+- Your computer needs JDK 25 and Maven (check with `java -version` and `mvn -v`), and for M5 a local
+  PostgreSQL that `psql -c 'select 1'` can reach. No container engine is used.
+- Copy the whole project folder you were given, including its hidden `.git` folder, to your computer.
+  Open the folder in VS Code, then follow "Start here". Get the teammate branch as described in M1.
 
 ## Troubleshooting
 
