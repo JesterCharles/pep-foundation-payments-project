@@ -22,5 +22,6 @@ is nothing to paste: run `mvn -q test -Pm4`. This note records what they are for
   equally accepted.
 - If you removed them, the M4 profile stops at compile time with
   `package io.javalin does not exist`; restore them from this note.
-- If your machine runs Maven offline, fetch the new dependencies once while online
-  (`mvn -q dependency:go-offline`), as in the Java pages.
+- The supplied workspace already provides these dependencies, so there is nothing to download or
+  install. If Maven reports that a dependency cannot be resolved, ask your trainer to repair the
+  workspace.
