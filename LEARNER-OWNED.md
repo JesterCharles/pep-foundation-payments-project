@@ -39,7 +39,7 @@ protected supplied path: port it, refactor it, and retire the Javalin parts when
 ## 3. Supplied paths (do not edit)
 
 - `RELEASES.md`, `LEARNER-OWNED.md`, `.gitattributes`, `scripts/**`
-- `docs/contracts/**`, `docs/tracks/**`, `docs/onboarding.md`, `docs/templates/**`
+- `docs/prd.md`, `docs/milestone-maps/**`, `docs/contracts/**`, `docs/tracks/**`, `docs/onboarding.md`, `docs/templates/**`
 - `api/src/test/java/payments/project/**`, `api/src/test/resources/project/**`
 - `pipeline/CONTRACT.md`, `pipeline/README.md`, `pipeline/.gitignore`, `pipeline/support/**`,
   `pipeline/data/samples/**`, `pipeline/tests/conftest.py`, `pipeline/tests/project/**`
