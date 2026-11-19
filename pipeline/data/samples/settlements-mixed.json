@@ -1,0 +1,7 @@
+[
+  {"reference": "PR-1", "provider_payment_id": "PP-000101", "amount": "1234.50", "currency": "USD", "settled_on": "2026-11-16"},
+  {"reference": "pr-2", "provider_payment_id": "PP-000102", "amount": "89.99", "currency": "usd", "settled_on": "2026-11-16"},
+  {"reference": "PR-3", "provider_payment_id": "PP-000103", "amount": "4999.99", "currency": "USD", "settled_on": "2026-11-17"},
+  {"reference": "PR-77", "provider_payment_id": "PP-000177", "amount": "1.00", "currency": "USD", "settled_on": "2026-11-17"},
+  {"reference": "PR-4", "provider_payment_id": "PP-000104"}
+]

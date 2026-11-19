@@ -1,0 +1,4 @@
+# Synthetic settlement statement for the Standard W15 scenario check (supplied; do not edit).
+# {REF} and {PAYMENT} are filled in by the check with the scenario request's reference and provider payment id.
+reference,provider_payment_id,amount,currency,settled_on
+{REF},{PAYMENT},1200.00,USD,2026-12-04

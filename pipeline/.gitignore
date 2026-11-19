@@ -1,0 +1,3 @@
+# Local Python build output (pip install -e .)
+*.egg-info/
+build/

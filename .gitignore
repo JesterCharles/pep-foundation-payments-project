@@ -1,3 +1,26 @@
-# Payment project: files Git must never track.
-# TODO(M1): add one rule per line for .env, target/, .idea/, .vscode/ and .DS_Store,
-#           then delete this TODO comment. Run `sh tests/m1/run-m1.sh` to check.
+# Project 2: files Git must never track.
+.env
+.env.*
+!.env.example
+
+# Build output and dependency folders
+target/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local run data (H2 database files); pipeline/data/samples is supplied and tracked
+/data/
+/api/data/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.iml
+.DS_Store

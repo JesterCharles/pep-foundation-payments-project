@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Project 2 API: Payment Approval and Reconciliation Platform (training project, synthetic data).
+
+  Supplied once as a skeleton with the W07 release; yours afterwards. It already holds:
+    - the supplied payments baseline (Javalin 7 + plain JDBC + H2), which keeps building and
+      passing its own tests under src/test/java/payments/baseline/;
+    - Spring Boot 4.1.2 (web MVC, Spring Data JPA, validation, RestClient, Actuator, H2).
+  Two written dependency additions follow, which you paste in yourself (RELEASES.md, "API dependency
+  additions"): Flyway with your first migration (Standard W08, Fast W08), and Spring Security with JWT
+  resource-server support (Standard W09, Fast W08). They are not here yet because Flyway takes over schema
+  creation and Spring Security locks every endpoint as soon as each is on the classpath.
+
+  Commands (run in api/):
+    mvn -q test                               baseline suite and your own tests only
+    mvn -q test -Dmilestone=standard-w08      plus every supplied Standard check up to week 8
+    mvn -q test -Dmilestone=fast-w07          plus every supplied Fast check up to week 7
+  See docs/tracks/standard.md or docs/tracks/fast.md for your track's weekly commands.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.2</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>pep.project2</groupId>
+  <artifactId>payments-api</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <java.version>25</java.version>
+    <!-- The Spring Boot application class the contract names (docs/contracts/W07-openapi.yaml). -->
+    <start-class>payments.PaymentsApplication</start-class>
+    <javalin.version>7.2.3</javalin.version>
+    <!-- H2 2.4.240 (the Boot 4.1.2 default) rejects valid rows on string CHECK constraints created in
+         another session; 2.5.252 fixes it. -->
+    <h2.version>2.5.252</h2.version>
+  </properties>
+
+  <dependencies>
+    <!-- Spring Boot API -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+    </dependency>
+    <!-- PostgreSQL driver: used only when a profile points the datasource at PostgreSQL (Compose, W14/W11). -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- API dependency additions (RELEASES.md) go below this line. -->
+
+    <!-- Supplied payments baseline: Javalin 7 HTTP server with Jackson 2 for its JSON. -->
+    <dependency>
+      <groupId>io.javalin</groupId>
+      <artifactId>javalin</artifactId>
+      <version>${javalin.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <!-- Tests -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Quiet on success: test output goes to target/surefire-reports, failures are still printed. -->
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <trimStackTrace>true</trimStackTrace>
+          <!-- JDK 25: let the Mockito agent attach quietly. -->
+          <argLine>-XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
+          <workingDirectory>${project.basedir}</workingDirectory>
+          <systemPropertyVariables>
+            <!-- Which supplied milestone checks run; empty runs only the baseline and your own tests. -->
+            <milestone>${milestone}</milestone>
+          </systemPropertyVariables>
+        </configuration>
+        <dependencies>
+          <!-- Naming the JUnit provider lets mvn dependency:go-offline fetch it, so mvn -q -o test works offline. -->
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit-platform</artifactId>
+            <version>${maven-surefire-plugin.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <!-- Keeps ${milestone} defined (empty) when no -Dmilestone=... is given. -->
+      <id>no-milestone</id>
+      <activation>
+        <property>
+          <name>!milestone</name>
+        </property>
+      </activation>
+      <properties>
+        <milestone></milestone>
+      </properties>
+    </profile>
+  </profiles>
+</project>

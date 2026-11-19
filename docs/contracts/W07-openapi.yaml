@@ -1,0 +1,160 @@
+# Supplied with the W07 release (both tracks). Replaced only by a later release; do not edit.
+# Payment Approval and Reconciliation Platform API (training project; synthetic data, USD only).
+openapi: 3.1.0
+info:
+  title: Payment platform API - W07 contract
+  version: "W07"
+  description: |
+    The Spring Boot port of the supplied payments baseline (api/src/main/java/payments, Javalin + JDBC).
+    The routes, JSON shapes, status codes and payment rules below are the baseline's; the port must keep them.
+    Application class: payments.PaymentsApplication (Spring Boot, default port 8080).
+    Identity: the X-Actor-Id header names a synthetic actor. It is a stub, not authentication.
+    Money: amounts travel as two-decimal text ("1234.50") and are exact whole cents inside (long).
+    Error bodies in W07 are JSON; the checks look at status codes only. ProblemDetail arrives later
+    (W08-openapi.yaml / W09-openapi.yaml).
+servers:
+  - url: http://localhost:8080
+x-actors:
+  requesters: [REQ-0001, REQ-0002, REQ-0003]
+  approvers:
+    APR-0001: "5000.00"
+    APR-0002: "25000.00"
+    APR-0003: "9999999.99"
+x-rules: |
+  - Amount text is one or more digits, '.', two digits; 0.01 to 9999999.99. Anything else answers 400.
+  - Currency is exactly USD; anything else answers 400.
+  - supplierId is SUP- plus four digits after trimming and upper-casing; invoiceNumber is not blank.
+  - The invoice key is SUPPLIER|INVOICE upper-cased with spaces removed; a second request with the same key answers 409.
+  - An approver may approve up to and including their limit; above it the approval is refused (403).
+  - Nobody approves their own request (403). A refused approval leaves the status unchanged and is recorded
+    in the history as approval-refused with the approver as actor.
+  - Lifecycle moves: SUBMITTED -> APPROVED | REJECTED | CANCELLED; APPROVED -> CANCELLED (the baseline's settlement
+    moves APPROVED -> PAID; later weeks add SENT and EXCEPTION).
+    Any other move answers 409 and changes nothing.
+x-persistence:
+  required-from: { fast: W07, standard: W08 }
+  description: |
+    From Fast W07 (Standard: W08) requests and history are stored through Spring Data JPA in these tables,
+    which the supplied checks read with plain JDBC. Hibernate's default naming maps camelCase fields to
+    these snake_case columns. status holds the status name as text (for example 'SUBMITTED'; with JPA,
+    @Enumerated(EnumType.STRING)), and amount_cents the whole cents. Extra columns you add must be nullable or have
+    a DEFAULT.
+  tables:
+    payment_requests: [id, supplier_id, invoice_number, amount_cents, currency, requested_by, status]
+    payment_events: [request_id, seq, actor_id, action, detail]
+paths:
+  /payment-requests:
+    post:
+      summary: Submit a payment request
+      parameters: [{ $ref: "#/components/parameters/Actor" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SubmitRequest" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+    get:
+      summary: List payment requests in id order
+      parameters:
+        - name: status
+          in: query
+          description: Case-insensitive status filter. Empty means no filter; a value matching no request gives [].
+          schema: { type: string }
+        - name: supplierId
+          in: query
+          description: Supplier filter (required from Fast W07; optional on Standard).
+          schema: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PaymentRequest" } } } } }
+  /payment-requests/{id}:
+    get:
+      summary: Read one payment request with its history
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /payment-requests/{id}/approve:
+    post:
+      summary: Approve (no body)
+      parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/Actor" }]
+      responses:
+        "200": { description: Approved, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /payment-requests/{id}/reject:
+    post:
+      summary: Reject with a reason
+      parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/Actor" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/Reason" } } } }
+      responses:
+        "200": { description: Rejected, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /payment-requests/{id}/cancel:
+    post:
+      summary: Cancel with a reason
+      parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/Actor" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/Reason" } } } }
+      responses:
+        "200": { description: Cancelled, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+components:
+  parameters:
+    Actor:
+      name: X-Actor-Id
+      in: header
+      required: true
+      description: Synthetic actor id (stub identity). Missing or unknown answers 400.
+      schema: { type: string, example: REQ-0001 }
+    Id:
+      name: id
+      in: path
+      required: true
+      description: Request id; non-numeric answers 400.
+      schema: { type: integer }
+  responses:
+    Error:
+      description: JSON error body without stack traces or echoed input, e.g. {"error":"..."}.
+  schemas:
+    SubmitRequest:
+      type: object
+      required: [supplierId, invoiceNumber, amount, currency]
+      properties:
+        supplierId: { type: string, example: SUP-0042 }
+        invoiceNumber: { type: string, example: INV 7781 }
+        amount: { type: string, example: "1234.50" }
+        currency: { type: string, enum: [USD] }
+    Reason:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+    PaymentRequest:
+      type: object
+      required: [id, supplierId, invoiceNumber, amount, currency, requestedBy, status, events]
+      properties:
+        id: { type: integer }
+        supplierId: { type: string }
+        invoiceNumber: { type: string }
+        amount: { type: string, example: "1234.50" }
+        currency: { type: string, enum: [USD] }
+        requestedBy: { type: string }
+        status: { type: string, enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED, PAID] }
+        events: { type: array, items: { $ref: "#/components/schemas/Event" } }
+    Event:
+      type: object
+      required: [seq, actorId, action, detail]
+      properties:
+        seq: { type: integer, minimum: 1 }
+        actorId: { type: string }
+        action: { type: string, enum: [submitted, approved, approval-refused, rejected, cancelled, amount-corrected, paid] }
+        detail: { type: string, description: "amount for submitted/approved, the reason, the refusing rule, or old->new: reason" }

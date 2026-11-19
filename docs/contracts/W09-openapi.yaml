@@ -1,0 +1,31 @@
+# Supplied with the Standard W09 release. Adds to W07-openapi.yaml and W08-openapi.yaml; do not edit.
+openapi: 3.1.0
+info:
+  title: Payment platform API - Standard W09 contract
+  version: "W09"
+  description: |
+    Standard W09 makes required everything W08-openapi.yaml marks x-required-from {standard: W09}:
+    ProblemDetail errors with field errors (x-errors), JWT authentication and separation of duties
+    (x-security), POST /auth/login, GET /me, POST /payment-requests/{id}/send with the stub provider
+    (docs/contracts/W09-provider-stub.md), and the approver queue that excludes the approver's own requests.
+    It adds the provider health check below (Standard only).
+    The supplied checks run with the Spring profile 'test' for the token checks and 'dev' for the earlier
+    weeks' checks; your dev profile must keep the X-Actor-Id stub and open endpoints, and no other profile may.
+servers:
+  - url: http://localhost:8080
+paths:
+  /actuator/health:
+    get:
+      summary: Service health (public, no token)
+      description: |
+        Shows a component named "provider" that is UP when the stub provider answers GET {provider.base-url}/health
+        with 200 and DOWN otherwise; the overall status follows it (DOWN answers 503). Enable the component view
+        with management.endpoint.health.show-components=always.
+      responses:
+        "200": { description: UP, content: { application/json: { example: { status: UP, components: { provider: { status: UP } } } } } }
+        "503": { description: DOWN, content: { application/json: { example: { status: DOWN, components: { provider: { status: DOWN } } } } } }
+x-configuration:
+  provider.base-url: "${PROVIDER_BASE_URL}"
+  provider.timeout: "client connect/read timeout, e.g. 2s (the checks use 400ms)"
+  provider.max-attempts: "attempts per send including the first (the checks use 3)"
+  security.jwt.secret: "${SECURITY_JWT_SECRET} (at least 32 characters; never committed)"

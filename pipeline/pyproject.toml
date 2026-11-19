@@ -1,0 +1,32 @@
+# Project 2 pipeline: invoice and settlement import, AI categorisation and the FastAPI
+# reconciliation service (training project, synthetic data only).
+#
+# Supplied once as a skeleton with the pipeline release (Standard W10 / Fast W09); yours afterwards.
+# Run everything from pipeline/:
+#   python -m pytest                              your own tests only
+#   python -m pytest --milestone standard-w10     plus the supplied Standard W10 checks
+#   python -m pytest --milestone fast-w09         plus the supplied Fast W09 checks
+[project]
+name = "payments-pipeline"
+version = "1.0.0"
+description = "Payment platform import pipeline and reconciliation service (training project)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.162.0",
+    "pydantic==2.14.2",
+    "psycopg[binary]==3.3.7",
+    "httpx==0.28.1",
+    "uvicorn==0.54.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1"]
+
+[tool.pytest.ini_options]
+# src/ holds your package (payments_pipeline); "." makes the supplied support/ helper importable;
+# tests/ makes the supplied check helpers importable as project.support.
+pythonpath = ["src", ".", "tests"]
+testpaths = ["tests"]
+addopts = "-q"
+# Starlette 1.x prefers httpx2 for TestClient; the pinned httpx 0.28.1 still works.
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]

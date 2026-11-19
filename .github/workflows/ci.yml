@@ -1,0 +1,24 @@
+# LEARNER-OWNED (Fast W11; optional evidence on Standard). Continuous-integration workflow.
+#
+# This starter is deliberately INERT: it only runs when started by hand (workflow_dispatch), so
+# nothing runs on hosted runners until you decide to enable it. The Fast W11 checks
+# (cd deploy && npm test -- fast-w11) read this file statically; nothing talks to GitHub.
+#
+# TODO: run on push and pull_request to main.
+# TODO: check out the code, set up Java 25, Python 3.14 and Node 24 with pinned action versions,
+#       then run each area's test command in its own directory:
+#       api (mvn -q test), pipeline (python -m pytest), web, ui and deploy (npm test).
+# TODO: anything secret comes from ${{ secrets.NAME }}; never print it and never write it here.
+name: ci
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "TODO(W11) replace this placeholder job with the real checks"

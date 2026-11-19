@@ -1,99 +1,96 @@
 # Releases
 
-This repository is the Foundation Project 1 starter: a complete stubbed `main` that already holds
-the supplied files and stubs for all six milestones. Each milestone below is still called a
-"release" because it names what was supplied for that week and which public tests become due.
+Project 2 (Standard and Fast tracks) ships as **one snapshot**: every supplied file for every week is already in this
+repository on day one, so nothing has to be merged in later and no release can conflict with your work. A "release"
+names what becomes **due** that week on your track and which supplied checks start to apply. Your track's weekly
+table, with taught cutoffs and due days, is in [docs/tracks/standard.md](docs/tracks/standard.md) or
+[docs/tracks/fast.md](docs/tracks/fast.md).
 
-## Rules of the release model
+## Rules
 
-1. **Releases only add.** Release content is only ever added under supplied paths:
-   `src/test/java/payments/release/**`, `src/test/java/payments/support/**`, `tests/**`,
-   `release/**`, `docs/templates/**` and fixtures (`tests/m1/fixtures/**`,
-   `src/test/resources/payments/release/**`). Merging a release can never conflict with your work.
-2. **A later release never overwrites a learner-owned file** (see [LEARNER-OWNED.md](LEARNER-OWNED.md)).
-   A stub becomes yours when it arrives and is never re-released. When a later milestone needs a
-   change in a file you own, or in a supplied interface, it arrives as written instructions or a
-   patch note that you apply yourself:
-   - `release/m4/pom-additions.md` and `release/m5/pom-additions.md` document the dependencies the
-     supplied `pom.xml` already contains (nothing to paste);
-   - `release/m5/saveSettlement-interface-addition.md` (one method on `PaymentRepository`, plus the
-     matching one-method in-memory addition).
-3. **Released tests accumulate.** Tests under `src/test/java/payments/release/mN/` stay valid in
-   every later milestone: desks are created through `PaymentDesk.create(directory, policy)`,
-   `NotFoundException` extends `IllegalArgumentException`, and `PaymentConflictException` and
-   `ApprovalRefusedException` extend `IllegalStateException`.
-4. **Manifests.** `release/mN/MANIFEST.sha256` lists the SHA-256 of that milestone's supplied files
-   that must stay byte-for-byte unchanged. Check them from the repository root:
+1. **Supplied files stay byte-for-byte unchanged.** [SUPPLIED.sha256](SUPPLIED.sha256) lists the SHA-256 of every
+   supplied file ([LEARNER-OWNED.md](LEARNER-OWNED.md), section 3). Check them from the repository root:
 
    ```sh
-   shasum -a 256 -c release/m3/MANIFEST.sha256      # macOS
-   sha256sum -c release/m3/MANIFEST.sha256          # Linux / Git Bash
+   shasum -a 256 -c SUPPLIED.sha256      # macOS
+   sha256sum -c SUPPLIED.sha256          # Linux / Git Bash
    ```
 
-   Files that you are expected to edit (stubs, `pom.xml`, `README.md`, the M1 script's marked
-   lines) are not in any manifest. `PaymentRepository.java` is the one supplied file you change
-   (M5, by the written addition), so it is checked separately: before M5 against
-   `release/m4/PaymentRepository.before-m5.sha256`, from M5 against
-   `release/m5/PaymentRepository.after-m5.sha256`.
-5. **No hidden tests.** The public tests in this repository are the whole executable contract.
-   Human reviewers additionally read your code, stories and notes.
+2. **Your files are never overwritten.** When a later week needs a change in a file you own, it arrives as written
+   instructions that you apply yourself: the two API dependency additions below.
+3. **Checks are selected, and they accumulate.** A selector `<track>-wNN` runs that track's supplied checks of week
+   NN and of every earlier week. Without a selector only the baseline suite and your own tests run, and they pass.
+   A track never runs the other track's checks.
 
-## Release 1 (M1): repository, user stories, settlement-export summary
+   | Area | Command (run in the area's folder) | Supplied check weeks: Standard | Fast |
+   |---|---|---|---|
+   | `api/` | `mvn -q test -Dmilestone=<track>-wNN` | W07, W08, W09, W15 | W07, W08 |
+   | `pipeline/` | `python -m pytest --milestone <track>-wNN` | W10 | W09 |
+   | `web/` | `npm test -- <track>-wNN` | W11, W12 | W09, W10 |
+   | `ui/` | `npm test -- <track>-wNN` | W12, W13, W14 | W10, W11 |
+   | `deploy/` | `npm test -- <track>-wNN` | W14 | W11 |
 
-Supplied: `RELEASES.md`, `LEARNER-OWNED.md`, `.gitattributes`, `scripts/settlement-summary.sh`
-skeleton (argument and missing-file checks written; you edit only between the `TODO(M1)` markers),
-`tests/m1/run-m1.sh`, `tests/m1/fixtures/*.txt`, `docs/templates/` (user stories, AI-use log,
-PR description), `release/m1/skeleton-outside-markers.sha256`, `release/m1/MANIFEST.sha256`, and the
-local branch `teammate/ap-contact`, which edits `README.md` so that it conflicts with your README edit.
-Test: `sh tests/m1/run-m1.sh`.
+   Every selector from `standard-w07` to `standard-w15` and `fast-w07` to `fast-w11` is valid in every area; a week
+   before an area's first check week runs your own tests only. `scripts/check-milestone.sh <track> <week>` runs every
+   area at once.
+4. **No hidden tests.** The supplied checks are public and are the whole executable part of each milestone. Reviewers
+   also read your code, notes and pull requests. A green check is necessary, not sufficient.
 
-## Release 2 (M2): exact amount parsing and payment-intake rules
+## API dependency additions (written instructions)
 
-Supplied: `pom.xml` (first and only release of it; yours afterwards), the `PaymentRules` stub,
-`src/test/java/payments/release/m2/PaymentRulesReleaseTest.java`, `release/m2/MANIFEST.sha256`.
-Test: `mvn -q test -Pm2`.
+`api/pom.xml` is yours. It arrives without Flyway and Spring Security, because each takes effect as soon as it is on the
+classpath: Flyway takes over schema creation from Hibernate, and Spring Security locks every endpoint. Paste each block
+below the line `<!-- API dependency additions (RELEASES.md) go below this line. -->` when your track reaches it.
 
-## Release 3 (M3): lifecycle, approval controls, attributable history
+**FLYWAY: Standard W08, Fast W08** (with your first migration in `api/src/main/resources/db/migration/`):
 
-Supplied: `PaymentEvent`, `Approver`, `ApprovalPolicy`, `AllOfPolicy` (worked composition example),
-the identity stub `ActorDirectory` and `InMemoryActorDirectory` (synthetic REQ-/APR- ids; NOT
-authentication), stubs for `PaymentStatus`, `PaymentRequest`, `WithinLimitPolicy`,
-`NotOwnRequestPolicy`, `Policies` and `PaymentDesk`, `docs/templates/decisions.md`,
-`DomainReleaseTest`, `DeskReleaseTest`, `release/m3/MANIFEST.sha256`.
-Test: `mvn -q test -Pm3`.
+```xml
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+    </dependency>
+```
 
-## Release 4 (M4): JSON API with stubbed actor identity, and your tests
+**SECURITY: Standard W09, Fast W08** (with your security configuration and a `dev` profile that keeps the X-Actor-Id stub):
 
-Supplied: `PaymentRepository` (interface), the `PaymentApi` skeleton (start, POST
-`/payment-requests`, GET `/payment-requests/{id}`, X-Actor-Id stub resolution), `PaymentView`,
-`EventView`, stubs for `InMemoryPaymentRepository` and the three exceptions, the learner test
-skeleton `PaymentDeskTest`, `release/m4/pom-additions.md` (notes on the Javalin 7.2.3 bundle and Mockito 5.24.0 already in `pom.xml`),
-`ApiReleaseTest` (real HTTP on a free localhost port), `RepositoryContractTest`, the test helpers in
-`src/test/java/payments/release/support/`, `release/m4/MANIFEST.sha256`.
-Test: `mvn -q test -Pm4`.
+```xml
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+```
 
-## Release 5 (M5): PostgreSQL persistence and atomic settlement
+Versions come from the Spring Boot parent; do not add `<version>` lines. Run `mvn -q dependency:go-offline` once
+after pasting, while you have network.
 
-Supplied: `src/test/java/payments/support/TestDatabase.java` (creates and drops a uniquely named
-database through PG* variables), `App.java` (memory or jdbc storage from `PAYMENTS_STORE`),
-`Settlement`, stubs for `DbConfig`, `JdbcPaymentRepository`, `schema.sql` and the learner test
-`JdbcPaymentRepositoryTest`, `release/m5/pom-additions.md` (notes on the PostgreSQL JDBC driver 42.7.14 already in `pom.xml`),
-`release/m5/saveSettlement-interface-addition.md` with its patch file, `JdbcRepositoryReleaseTest`,
-`ApiOnJdbcReleaseTest`, `release/m5/MANIFEST.sha256`.
-First: apply the written interface addition. Test: `mvn -q test -Pm5` with a local PostgreSQL. If no database
-is reachable the database tests fail with a message naming the PG* variables to set.
+## Week by week
 
-## Release 6 (M6): reconciliation reports; Project 1 completion
+Standard week = schedule week W07-W15 (days S1-S43). Fast week = W07-W11 (days FT1-FT25).
 
-Supplied: `StatementLine`, `ReconciliationResult`, stubs for `Reconciler` and `PaymentReports`,
-`src/test/resources/payments/release/m6/statements/*.csv` (synthetic statement exports),
-`ReconcilerReleaseTest`, `ReportsRouteReleaseTest`, `docs/templates/walkthrough.md`,
-`release/m6/MANIFEST.sha256`.
-Test: `mvn -q test` (the complete released suite plus your tests).
+| Week | Standard: due this week | Fast: due this week |
+|---|---|---|
+| W07 | Spring Boot port, in memory (`api/`); contract `docs/contracts/W07-openapi.yaml` | Spring Boot port with JPA persistence (`api/`); contract `W07-openapi.yaml` incl. `x-persistence` |
+| W08 | FLYWAY addition; JPA, migrations, atomic approval, `/correct`, `/approval-queue` (`W08-openapi.yaml`) | FLYWAY and SECURITY additions; everything in `W08-openapi.yaml` and `W08-provider-stub.md` |
+| W09 | SECURITY addition; `W09-openapi.yaml`, `W09-provider-stub.md`; your control tests | Pipeline (`pipeline/`, `pipeline/CONTRACT.md`, Fast uses `pipeline/support/db_connection.py`); `web/` form |
+| W10 | Pipeline (`pipeline/`, `pipeline/CONTRACT.md`; you write the psycopg connection code) | `web/` API calls and a Vitest test; `ui/` routed workflows |
+| W11 | `web/` form and queue page | `ui/` sign-in, roles, exceptions (`W13-exception-cases.yaml`), Testing Library tests; `deploy/`; CI; README and walkthrough |
+| W12 | `web/` API calls and a Vitest test; first `ui/` components | - |
+| W13 | `ui/` routed workflows and exceptions (`W13-exception-cases.yaml`); Testing Library tests | - |
+| W14 | `ui/` sign-in and roles; `deploy/` Compose and Dockerfiles | - |
+| W15 | The whole platform end to end; README and walkthrough (due end of S42; S43 is the Final) | - |
 
-## Later tracks (Standard and Fast)
+Every week also: `docs/milestones/WNN.md` (template in `docs/templates/milestone-note.md`) and `docs/ai-use-log.md`.
 
-Standard and Fast continue this same application in this same repository. Their releases follow
-the rules above: they add supplied support, tests and new files, never overwrite a learner-owned
-file, and are not part of the Foundation test selection (M1-M6 commands above). AWS project
-integration is not included; any later AWS step is an optional enhancement.
+## What is not here
+
+Reference solutions, reviewer material and grading data are not in this repository. Docker and Compose files are
+checked statically only: no container engine, registry, cloud account or paid CI runner is needed or used. The CI
+workflow ships inert (`workflow_dispatch` only).
