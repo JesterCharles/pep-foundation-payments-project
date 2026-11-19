@@ -1,0 +1,4 @@
+# Positive declaration that this repository intentionally has no CI checks.
+# no-mistakes honors it only from the default branch, and only while the forge
+# reports zero checks on a PR head; any registered check is still enforced.
+no_ci: true
