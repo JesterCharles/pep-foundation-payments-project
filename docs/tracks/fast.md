@@ -3,8 +3,8 @@
 Five cumulative milestones, one per Fast technology week W07-W11, each worth 100 marks. A milestone requires
 only topics taught by its **taught cutoff** (that week's Wednesday, inclusive) and is due at the end of the
 **Due** day. W11 is due at the end of FT24 (Thursday), the day before the FT25 Final, so milestone grading never
-collides with the Final. Milestone marks are formative: the Final stands alone and milestone marks do not count
-toward its capstone (24%) or walkthrough (16%) weights.
+collides with the Final. W07-W10 milestone marks are formative and do not count toward the Final. W11, the last milestone, is part of the
+programme Final Assessment together with the final MCQ and the four coding challenges (see docs/prd.md 10.2).
 
 No Fast milestone requires a Standard-only topic: constructor injection across layers, Spring health checks
 and writing psycopg connection code are not required (the W09 release supplies `pipeline/support/db_connection.py`).

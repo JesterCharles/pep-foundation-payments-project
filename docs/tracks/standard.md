@@ -3,8 +3,8 @@
 Nine cumulative milestones, one per schedule week W07-W15, each worth 100 marks. A milestone requires only
 topics taught by its **taught cutoff** (that week's Wednesday, inclusive) and is due at the end of the **Due**
 day (that week's Friday). Week 15 is S41-S43 only: its cutoff is S38, the previous full week's Wednesday, and
-it is due by the end of S42, before the S43 Final. Milestone marks are formative: the S43 Final stands alone and
-milestone marks do not count toward its capstone (24%) or walkthrough (16%) weights.
+it is due by the end of S42, before the S43 Final. W07-W14 milestone marks are formative and do not count toward the Final. W15, the last milestone, is part of the
+programme Final Assessment together with the final MCQ and the four coding challenges (see docs/prd.md 10.2).
 
 Each week you also commit `docs/milestones/WNN.md` (template inside) and keep `docs/ai-use-log.md` current.
 Supplied checks are cumulative: `-Dmilestone=standard-w09` also runs the W07 and W08 checks.
