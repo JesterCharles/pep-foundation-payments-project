@@ -1,0 +1,9 @@
+supplier_id,invoice_number,amount,currency,description
+SUP-0001,INV-1001,1234.50,USD,Printer paper and toner for the finance office
+SUP-0002,INV-2001,89.99,USD,Annual licence renewal for the diagramming tool
+SUP-0003,INV-3001,5000.00,USD,Replacement laptops for two analysts
+SUP-0004,INV-4001,0.01,USD,Rounding test invoice for the training ledger
+SUP-0005,INV-5001,25000.00,USD,Quarterly facilities cleaning contract
+SUP-0006,INV-6001,412.75,USD,Courier deliveries between warehouses
+SUP-0007,INV-7001,9999999.99,USD,Largest allowed synthetic amount
+SUP-0008,INV-8001,760.00,USD,Train tickets for the supplier review visit

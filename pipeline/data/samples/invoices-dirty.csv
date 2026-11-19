@@ -1,0 +1,16 @@
+supplier_id,invoice_number,amount,currency,description
+SUP-0011,INV 7781,1200.00,USD,Office chairs for the second floor
+sup-0011 , inv7781 ,1200.00,USD,Same invoice sent again with different spacing
+SUP-0012,INV-0002,"1,200.00",USD,Amount with a thousands separator
+SUP-0013,INV-0003,12.5,USD,Amount with one decimal place
+SUP-0014,INV-0004,-5.00,USD,Negative amount
+SUP-0015,INV-0005,0.00,USD,Zero amount
+SUP-0016,INV-0006,,USD,Missing amount
+SUP-0017,INV-0007,250.00,EUR,Invoice in euros
+SUP-0018,INV-0008,99.00,usd,Lower-case currency code is accepted
+SUPPLIER-19,INV-0009,10.00,USD,Supplier id in the wrong format
+SUP-0020,   ,10.00,USD,Blank invoice number
+SUP-0021,INV-0010,15.00,USD
+SUP-0022,INV-0011,310.40,USD,<b>Monitor stands</b> for 1234.50 total
+SUP-0023,INV-0012,10000000.00,USD,Above the largest allowed amount
+SUP-0024,INV-0013,45.10,USD,Cloud storage subscription

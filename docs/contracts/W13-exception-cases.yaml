@@ -1,0 +1,68 @@
+# Supplied with the Standard W13 release (exception-case DTOs); the Fast track uses it from W11. Do not edit.
+openapi: 3.1.0
+info:
+  title: Payment platform API - exception cases
+  version: "W13"
+  description: |
+    An exception case records a payment that needs a payables clerk's attention: a provider REJECTED answer
+    (opened automatically by POST /payment-requests/{id}/send) or a reconciliation mismatch (opened by a clerk).
+    A case goes OPEN -> RESOLVED once, with a non-blank note. Resolving records an 'exception-resolved' history
+    event on the payment request with the note as detail and the clerk as actor; the request keeps status
+    EXCEPTION. Nothing is ever deleted: no route accepts DELETE.
+    The UI weeks (Standard W13, Fast W11) use a stubbed API with these shapes; the Standard W15 scenario check
+    runs them against your API.
+servers:
+  - url: http://localhost:8080
+paths:
+  /exception-cases:
+    get:
+      summary: List exception cases (any signed-in user)
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [OPEN, RESOLVED] } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ExceptionCase" } } } } }
+    post:
+      summary: Open a case for a payment request (payables clerk only); the request moves to EXCEPTION
+      description: >-
+        Allowed while the request is APPROVED, SENT, PAID or EXCEPTION; any other status answers 409. Records an
+        'exception-opened' history event on the request with the reason as detail and the clerk as actor.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [paymentRequestId, reason], properties: { paymentRequestId: { type: integer }, reason: { type: string, minLength: 1 } } }
+      responses:
+        "201": { description: Opened, content: { application/json: { schema: { $ref: "#/components/schemas/ExceptionCase" } } } }
+        "400": { description: Missing request id or blank reason }
+        "403": { description: Not a payables clerk }
+        "404": { description: Unknown payment request }
+        "409": { description: The request's status does not allow a case }
+  /exception-cases/{id}/resolve:
+    post:
+      summary: Resolve an OPEN case with a note (payables clerk only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [note], properties: { note: { type: string, minLength: 1 } } }
+      responses:
+        "200": { description: Resolved, content: { application/json: { schema: { $ref: "#/components/schemas/ExceptionCase" } } } }
+        "400": { description: Blank note }
+        "403": { description: Not a payables clerk }
+        "404": { description: Unknown case }
+        "409": { description: "Already resolved (ProblemDetail detail: \"exception case already resolved\")" }
+components:
+  schemas:
+    ExceptionCase:
+      type: object
+      required: [id, paymentRequestId, status, reason, openedBy, openedAt]
+      properties:
+        id: { type: integer }
+        paymentRequestId: { type: integer }
+        status: { type: string, enum: [OPEN, RESOLVED] }
+        reason: { type: string, example: "statement amount 1200.00 differs from 1234.50" }
+        openedBy: { type: string, example: PAY-0001 }
+        openedAt: { type: string, format: date-time }
+        resolvedBy: { type: [string, "null"] }
+        resolvedAt: { type: [string, "null"], format: date-time }
+        note: { type: [string, "null"] }

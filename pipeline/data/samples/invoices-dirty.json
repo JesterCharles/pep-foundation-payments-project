@@ -1,0 +1,9 @@
+[
+  {"supplier_id": "SUP-0031", "invoice_number": "INV-3101", "amount": "640.00", "currency": "USD", "description": "Network switches for the lab"},
+  {"supplier_id": "SUP-0031", "invoice_number": "inv-3101", "amount": "640.00", "currency": "USD", "description": "Duplicate of the switches invoice"},
+  {"supplier_id": "SUP-0032", "invoice_number": "INV-3102", "amount": "12.345", "currency": "USD", "description": "Three decimal places"},
+  {"supplier_id": "SUP-0033", "invoice_number": "INV-3103", "amount": "80.00", "currency": "GBP", "description": "Invoice in pounds"},
+  {"supplier_id": "SUP-0034", "invoice_number": "INV-3104", "amount": 75.0, "currency": "USD", "description": "Amount sent as a JSON number"},
+  "not an object",
+  {"supplier_id": "SUP-0035", "invoice_number": "INV-3105", "amount": "1500.00", "currency": "USD", "description": "Consulting workshop for the AP team"}
+]

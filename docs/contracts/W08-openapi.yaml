@@ -1,0 +1,161 @@
+# Supplied with the W08 release (both tracks). Adds to W07-openapi.yaml; do not edit.
+# Items marked x-required-from {fast: W08, standard: W09} are required on Fast this week and on Standard next
+# week (Standard reads the same items again in W09-openapi.yaml).
+openapi: 3.1.0
+info:
+  title: Payment platform API - W08 contract
+  version: "W08"
+  description: |
+    Everything in W07-openapi.yaml still holds. W08 adds: persistence through Spring Data JPA with a Flyway
+    schema whose constraints mirror the payment rules, the approval record written in the same transaction as
+    the status change and the history event, submittedAt on every request, amount corrections, and a
+    paginated, DTO-shaped approval queue that returns each request with its history without N+1 queries.
+    Fast W08 also adds ProblemDetail errors, JWT authentication with separation of duties and the
+    idempotent provider client (docs/contracts/W08-provider-stub.md).
+servers:
+  - url: http://localhost:8080
+x-persistence:
+  migrations: api/src/main/resources/db/migration (Flyway; applied to an empty database by the checks)
+  tables:
+    payment_requests:
+      columns: "id BIGINT key; supplier_id; invoice_number; amount_cents BIGINT; currency; requested_by; status; submitted_at TIMESTAMP WITH TIME ZONE"
+      constraints:
+        - currency is exactly 'USD'
+        - amount_cents between 1 and 999999999
+        - status is one of the contract statuses (SUBMITTED, APPROVED, REJECTED, CANCELLED, PAID; SENT and EXCEPTION from the security week)
+        - unique (supplier_id, invoice_number)
+      note: "Extra columns you add (for example an invoice key) must be nullable or have a DEFAULT; the checks insert rows naming only these columns and an explicit id."
+    payment_events: { columns: "request_id -> payment_requests(id); seq (1, 2, ... per request); actor_id; action; detail" }
+    approvals: { columns: "request_id -> payment_requests(id); approver_id; approved_at" }
+  transaction: |
+    Approving writes the approvals row, the APPROVED status and the 'approved' history event in one transaction.
+    If any of the three writes fails, none is kept and the API answers 5xx. A refused approval is not a failure:
+    its approval-refused event is kept and the API answers 403.
+  profiles: |
+    The supplied checks start your application with their own in-memory H2 database (PostgreSQL mode), using the
+    Spring profile 'dev' for the X-Actor-Id checks and the profile 'test' for the token checks (security week).
+    Keep secrets out of tracked files: in application*.yml / .properties, a key whose name ends in password,
+    secret, token, api-key or private-key must be exactly a ${NAME} placeholder (an empty default, ${NAME:},
+    is allowed), never a literal or a placeholder with a literal default.
+    Store user password hashes in code or a migration, not as configuration values.
+paths:
+  /payment-requests/{id}/correct:
+    post:
+      summary: Correct the amount of a SUBMITTED request (requester only) with a reason
+      description: >-
+        Records amount-corrected with detail "old->new: reason", for example
+        "1234.50->1200.00: credit note applied". Not SUBMITTED answers 409.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: X-Actor-Id, in: header, description: "the acting requester (dev profile; a token from the security week)", schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [amount, reason], properties: { amount: { type: string }, reason: { type: string, minLength: 1 } } }
+      responses:
+        "200": { description: Corrected, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "400": { description: Invalid amount or blank reason }
+        "403": { description: Not the requester }
+        "404": { description: Unknown id }
+        "409": { description: Not SUBMITTED }
+  /approval-queue:
+    get:
+      summary: SUBMITTED requests waiting for approval, one page at a time, each with its history
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 }, description: "Negative answers 400; past the last page gives empty content." }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 }, description: "Outside 1..100 answers 400." }
+        - { name: sort, in: query, schema: { type: string, enum: [submittedAt, amount], default: submittedAt }, description: "submittedAt: oldest first; amount: largest first. Ties by id ascending." }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/QueuePage" } } } }
+        "400": { description: Invalid page, size or sort }
+      x-efficiency: One page with history is read in a bounded number of SQL statements (the checks allow at most 4 for a page of 20).
+      x-later: From the security week an approver's queue excludes requests they submitted.
+  /payment-requests/{id}/send:
+    x-required-from: { fast: W08, standard: W09 }
+    post:
+      summary: Send an APPROVED request to the stub payment provider (payables clerk only)
+      description: |
+        See the provider stub contract. ACCEPTED -> SENT with a 'sent' event whose detail is the provider payment
+        id. REJECTED -> EXCEPTION with a 'provider-rejected' event (no retry). Provider unreachable after the
+        configured attempts -> 502 and the request stays APPROVED. Not APPROVED answers 409.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Sent or moved to EXCEPTION, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentRequest" } } } }
+        "403": { description: Not a payables clerk }
+        "409": { description: Not APPROVED }
+        "502": { description: Provider unavailable }
+  /auth/login:
+    x-required-from: { fast: W08, standard: W09 }
+    post:
+      summary: Sign in a synthetic user; returns a signed token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [userId, password], properties: { userId: { type: string }, password: { type: string } } }
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  userId: { type: string }
+                  roles: { type: array, items: { type: string, enum: [REQUESTER, APPROVER, PAYABLES_CLERK] } }
+                  approvalLimit: { type: [string, "null"], example: "5000.00", description: "null for users who are not approvers" }
+        "401": { description: Bad credentials }
+  /me:
+    x-required-from: { fast: W08, standard: W09 }
+    get:
+      summary: The current user (from the token; in the dev profile from X-Actor-Id)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { userId: { type: string }, roles: { type: array, items: { type: string } }, approvalLimit: { type: [string, "null"] } } } } } }
+        "401": { description: No valid token }
+x-security:
+  x-required-from: { fast: W08, standard: W09 }
+  scheme: "Authorization: Bearer <JWT>, HS256, verified with the property security.jwt.secret (env SECURITY_JWT_SECRET; the checks generate their own secret at test time). The HMAC key is the secret's UTF-8 bytes as written; do not Base64-decode it."
+  claims: { sub: user id, roles: "array of REQUESTER | APPROVER | PAYABLES_CLERK", exp: expiry }
+  rules:
+    - Without a valid token every route except /auth/login and /actuator/health answers 401 (tampered, expired, wrongly signed or malformed tokens included).
+    - The acting user is the token subject. An X-Actor-Id header is ignored outside the dev profile.
+    - Approval limits come from the server's user directory, never from the client.
+    - "submit: REQUESTER or APPROVER (payables clerk 403). approve/reject: an APPROVER other than the requester. cancel: the requester or an APPROVER. send: PAYABLES_CLERK. Reads: any signed-in user."
+  dev-profile: The Spring profile 'dev' keeps every endpoint open and takes the actor from X-Actor-Id, so the earlier weeks' checks keep passing.
+  users: "REQ-0001..REQ-0003 requesters; APR-0001 (5000.00), APR-0002 (25000.00), APR-0003 (9999999.99) approvers; PAY-0001 payables clerk. Local dev password for all: change-me-local-only."
+x-errors:
+  x-required-from: { fast: W08, standard: W09 }
+  format: "application/problem+json ProblemDetail (RFC 9457): type, title, status, detail; validation failures add errors: [{field, message}] naming every bad field (supplierId, invoiceNumber, amount, currency)."
+  statuses:
+    "400": invalid input
+    "401": not signed in
+    "403": "refused; the detail names the rule, for example \"over approval limit\", \"own request\" or \"role\""
+    "404": unknown id
+    "409": "duplicate invoice (detail \"duplicate invoice\") or invalid move"
+    "502": provider unavailable
+components:
+  schemas:
+    PaymentRequest:
+      description: As in W07, plus submittedAt; statuses SENT and EXCEPTION and the events sent, provider-rejected, exception-opened and exception-resolved arrive with the provider client.
+      type: object
+      properties:
+        id: { type: integer }
+        supplierId: { type: string }
+        invoiceNumber: { type: string }
+        amount: { type: string }
+        currency: { type: string, enum: [USD] }
+        requestedBy: { type: string }
+        status: { type: string, enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED, SENT, EXCEPTION, PAID] }
+        submittedAt: { type: string, format: date-time }
+        events: { type: array, items: { type: object, properties: { seq: { type: integer }, actorId: { type: string }, action: { type: string }, detail: { type: string } } } }
+    QueuePage:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/PaymentRequest" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }

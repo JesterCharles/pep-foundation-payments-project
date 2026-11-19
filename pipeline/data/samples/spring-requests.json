@@ -1,0 +1,7 @@
+[
+  {"id": 1, "supplierId": "SUP-0001", "invoiceNumber": "INV-1001", "amount": "1234.50", "currency": "USD", "requestedBy": "REQ-0001", "status": "SENT", "events": []},
+  {"id": 2, "supplierId": "SUP-0002", "invoiceNumber": "INV-2001", "amount": "89.99", "currency": "USD", "requestedBy": "REQ-0002", "status": "SENT", "events": []},
+  {"id": 3, "supplierId": "SUP-0003", "invoiceNumber": "INV-3001", "amount": "5000.00", "currency": "USD", "requestedBy": "REQ-0001", "status": "SENT", "events": []},
+  {"id": 4, "supplierId": "SUP-0004", "invoiceNumber": "INV-4001", "amount": "0.01", "currency": "USD", "requestedBy": "REQ-0003", "status": "SENT", "events": []},
+  {"id": 5, "supplierId": "SUP-0005", "invoiceNumber": "INV-5001", "amount": "25000.00", "currency": "USD", "requestedBy": "REQ-0002", "status": "APPROVED", "events": []}
+]

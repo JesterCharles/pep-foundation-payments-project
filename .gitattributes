@@ -1,6 +1,14 @@
-# Supplied (release 1). Keep shell scripts and fixtures with LF line endings on every platform.
+# Supplied. Keep shell scripts and fixtures with LF line endings on every platform.
 *.sh text eol=lf
 *.txt text eol=lf
 *.csv text eol=lf
 *.sha256 text eol=lf
 *.patch text eol=lf
+*.java text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
