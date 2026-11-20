@@ -182,6 +182,132 @@ before SECURITY is pasted or with the `dev` profile afterwards, and the security
 `SECURITY_JWT_SECRET` set. They do not cover `/send` (the stub provider runs only inside the supplied checks),
 `/actuator/health`, the exception-case routes or the pipeline's FastAPI routes.
 
+There are three sets: W07 (21 checks), W08 (11) and security (19). A combined file holds all 51 in that order; it
+cannot pass in one run, because the first two sets need the `X-Actor-Id` stub and the security set needs real tokens.
+The stub means no security yet, or the `dev` profile once security exists; the tokens need a non-`dev` profile. Run
+the combined file as two parts. Each check is a JSON object with `name`, `method`, `path`, an optional `body`,
+`expect_status`, `expect_body` and an optional `capture`, the same shape as the Foundation Project 1 checks. It also
+has one key that Project 1 did not have: `headers`.
+
+**`headers`.** An object that maps a request header name to a string value. The headers are sent with that one
+request only. A check without `headers` sends no identity header, and some checks leave it out on purpose to test
+exactly that. Only two header names occur:
+
+- `X-Actor-Id`: every W07 and W08 check except one, plus two security checks that show it is ignored;
+- `Authorization`: security checks only, always `Bearer ` followed by a token.
+
+No check sets `Content-Type`. A check with a `body` relies on the tool sending it as JSON, as in Project 1.
+
+**Placeholders.** A `{{name}}` in `path`, or inside a header value, is replaced before the request is sent. The value
+comes from an earlier check in the same file: `"capture": {"name": "field"}` stores that field of the earlier check's
+JSON response. Every placeholder is captured earlier in its own file, and no value passes between files. No placeholder
+appears in a `body` or an `expect_body`. Project 1 used placeholders in `path` only. The sign-in user ids and
+passwords are literal values in the login bodies (the local password from section 2), not placeholders.
+
+| Placeholder | Set | Used in | Captured from |
+|---|---|---|---|
+| `{{r1}}` | W07 | `path` | `id` of "W07 submit a payment request" (REQ-0001, 1234.50) |
+| `{{r2}}` | W07 | `path` | `id` of "W07 submit one cent over APR-0001's limit" (REQ-0001, 5000.01) |
+| `{{r3}}` | W07 | `path` | `id` of "W07 approver submits a request" (APR-0002, 10.00) |
+| `{{q1}}` | W08 | `path` | `id` of "W08 submit a payment request" (REQ-0001, 1234.50) |
+| `{{req_token}}` | security | `Authorization` | `token` of "Security sign in REQ-0001" (`POST /auth/login`) |
+| `{{apr1_token}}` | security | `Authorization` | `token` of "Security sign in APR-0001" |
+| `{{apr2_token}}` | security | `Authorization` | `token` of "Security sign in APR-0002" |
+| `{{pay_token}}` | security | `Authorization` | `token` of "Security sign in PAY-0001" |
+| `{{s1}}` | security | `path` | `id` of "Security the actor comes from the token, not the header" (REQ-0001, 100.00) |
+| `{{s2}}` | security | `path` | `id` of "Security an approver submits a request" (APR-0002, 50.00) |
+| `{{s3}}` | security | `path` | `id` of "Security submit one cent over APR-0001's limit" (REQ-0001, 5000.01) |
+
+**Which checks depend on headers.**
+
+- **W07.** 20 of the 21 checks send `X-Actor-Id`; "W07 missing X-Actor-Id is 400" sends none. On every POST
+  (submit, approve, reject, cancel) the header decides the result: it sets who submitted, and who approves under the
+  limit and own-request rules. The six GET checks also send it, but the W07 contract does not take an actor on reads,
+  so their result does not depend on it.
+- **W08.** All 11 checks send `X-Actor-Id`. It decides the result on submit, `/correct` (requester only) and approve.
+  The four `/approval-queue` checks send APR-0001, but the W08 queue takes no actor; leaving out the approver's own
+  requests starts in the security week.
+- **Security.** The five sign-in checks and "/me without a token" send no headers. Eleven checks send
+  `Authorization: Bearer {{..._token}}`, and two send only literal values:
+  - "a malformed token is 401" sends `Bearer not.a.token`;
+  - "X-Actor-Id alone is ignored outside the dev profile" sends only `X-Actor-Id: REQ-0001`.
+
+  One of the eleven, "the actor comes from the token, not the header", also sends `X-Actor-Id: APR-0003` with the
+  REQ-0001 token and expects `requestedBy` to be REQ-0001.
+
+**Status codes for missing or invalid identity.** With the `X-Actor-Id` stub (W07 and W08 sets, before
+security or with the `dev` profile):
+
+| Request | Status |
+|---|---|
+| `X-Actor-Id` missing | 400 |
+| unknown actor (`REQ-9999`) | 400 |
+| known actor without the right (another requester correcting, over the limit, own request) | 403 |
+
+Outside `dev` (security set):
+
+| Request | Status |
+|---|---|
+| no token | 401 |
+| malformed token | 401 |
+| `X-Actor-Id` without a token | 401 |
+| wrong password at `/auth/login` | 401 |
+| valid token, but the role or a rule refuses | 403, with a ProblemDetail `status` of 403 |
+
+The contract also answers 401 for tampered, expired and wrongly signed tokens. The supplied `SecurityChecks` cover
+those cases, and these optional checks do not.
+
+**If your tool lacks support.** The two kinds of gap need different handling:
+
+- **It ignores `headers`.** The W07 and W08 sets are then not usable as a whole. Every POST answers 400 for a
+  missing actor, so the submits capture no id and every later `{{r1}}`, `{{r2}}`, `{{r3}}` or `{{q1}}` check breaks,
+  GETs included. The checks that expect 400 anyway pass for the wrong reason. Every security check that sends a token
+  gets 401. Run these checks by hand with the header, or skip them with the reason "tool sends no headers".
+- **It sends headers but does not replace `{{...}}` inside them.** The eleven token checks would send the placeholder
+  text and get 401, which is a false failure. Run them by hand: call `POST /auth/login`, copy `token` from the
+  response, and send `Authorization: Bearer <token>`. Otherwise skip them with the reason "needs a captured token".
+  Skipping "the actor comes from the token, not the header" also leaves `{{s1}}` unset, and two later checks use it.
+
+**Worked example.** Three security checks, copied from the security set:
+
+```json
+[
+  {
+    "name": "Security sign in REQ-0001",
+    "method": "POST",
+    "path": "/auth/login",
+    "body": {"userId": "REQ-0001", "password": "change-me-local-only"},
+    "expect_status": 200,
+    "expect_body": {"userId": "REQ-0001"},
+    "capture": {"req_token": "token"}
+  },
+  {
+    "name": "Security the actor comes from the token, not the header",
+    "method": "POST",
+    "path": "/payment-requests",
+    "headers": {"Authorization": "Bearer {{req_token}}", "X-Actor-Id": "APR-0003"},
+    "body": {"supplierId": "SUP-0201", "invoiceNumber": "INV-APIS-1", "amount": "100.00", "currency": "USD"},
+    "expect_status": 201,
+    "expect_body": {"requestedBy": "REQ-0001", "status": "SUBMITTED"},
+    "capture": {"s1": "id"}
+  },
+  {
+    "name": "Security a requester cannot approve",
+    "method": "POST",
+    "path": "/payment-requests/{{s1}}/approve",
+    "headers": {"Authorization": "Bearer {{req_token}}"},
+    "expect_status": 403,
+    "expect_body": {"status": 403}
+  }
+]
+```
+
+1. The first check stores the `token` field of the login response as `req_token`.
+2. The second sends `Authorization: Bearer <that token>` with a spoofed `X-Actor-Id`, expects the request to be
+   recorded for REQ-0001, and stores the new `id` as `s1`.
+3. The third sends `POST /payment-requests/<s1>/approve` with the same token, and a requester may not approve, so it
+   expects 403.
+
 ## 8. Non-functional requirements
 
 | Area | Requirement | Where checked |
